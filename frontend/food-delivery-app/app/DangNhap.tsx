@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRouter } from "expo-router";
-import { loginUser } from "./data/dataService";
+import { loginUser } from "../data/dataService";
 
 export default function LoginScreen() {
   const router = useRouter();

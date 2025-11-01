@@ -13,7 +13,7 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getAllRestaurants, getRestaurantImageById } from "../data/dataService";
+import { getAllRestaurants, getRestaurantImageById } from "../../data/dataService";
 import { Stack } from "expo-router";
 import RestaurantList from "@/components/restaurant/RestauerantList";
 export default function CategoryDetailScreen() {

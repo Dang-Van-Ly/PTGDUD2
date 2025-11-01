@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { users } from "./data/mockData";
+import { users } from "../data/mockData";
 
 export default function RegisterScreen() {
   const router = useRouter();

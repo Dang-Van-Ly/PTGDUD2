@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import RestaurantList from "../../components/restaurant/RestauerantList";
+
 import {
   View,
   Text,
@@ -15,7 +16,7 @@ import FontAwesome from "@expo/vector-icons/FontAwesome";
 import {
   getAllRestaurants,
   getRestaurantImageById,
-} from "../data/dataService";
+} from "../../data/dataService";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 

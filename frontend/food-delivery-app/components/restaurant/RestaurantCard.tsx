@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, Image, TouchableOpacity, StyleSheet } from "react-native";
-import { getRestaurantImageById } from "../.././app/data/dataService";
+import { getRestaurantImageById } from "../../data/dataService";
 
 export type Restaurant = {
   id: string;
