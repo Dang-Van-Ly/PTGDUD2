@@ -1,10 +1,36 @@
-import { restaurants, products, restaurantImages, users, reviews, orders, carts } from "./mockData";
-import { ImageSourcePropType } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ImageSourcePropType } from "react-native";
+import { carts, orders, products, restaurantImages, restaurants, reviews, users, promotions, ordersMock } from "./mockData";
+import axios from "axios";
+import { API_URL } from "../app/(tabs)/home";
 
-export function getAllRestaurants() {
-  return [...restaurants];
+// 🧾 Interface chuẩn cho Promotion
+export interface Promotion {
+  id: string;
+  type: "app" | "restaurant";
+  restaurantId: string | null;
+  discount: { type: string; value: any };
+   condition: {                   
+    minOrder?: number;
+    paymentMethod?: string;
+    userType?: string;
+  };
+  validFrom: string;
+  validTo: string;
+  title: string;
+  description: string;
+  discountAmount?: number; // Số tiền giảm giá tính toán được
 }
+// 🔹 Lấy tất cả nhà hàng
+export const getAllRestaurants = async () => {
+  try {
+    const res = await axios.get(`${API_URL}/restaurants`);
+    return res.data;
+  } catch (error) {
+    console.error("❌ getAllRestaurants error:", error);
+    return [];
+  }
+};
 
 export const getAllRestaurantsImg = () => {
   return restaurantImages;
@@ -18,10 +44,17 @@ export const getProductsByRestaurantId = (restaurantId: string) => {
 };
 
 // 3️⃣ Lấy chi tiết 1 món ăn
-export const getProductDetails = (productId: string) => {
-  const p = products.find((product) => product.id === productId);
-  return p ? normalizeProduct(p) : undefined;
-};
+
+export async function getProductDetails(  id: string) {
+  try {
+    const res = await fetch(`${API_URL}/products/${id}`);
+    if (!res.ok) throw new Error("Không tìm thấy sản phẩm");
+    return await res.json();
+  } catch (err) {
+    console.error("Lỗi khi tải sản phẩm:", err);
+    return null;
+  }
+}
 
 // Chuẩn hóa product
 function normalizeProduct(product: any) {
@@ -259,45 +292,29 @@ console.log("✅ Đã thêm sản phẩm vào order:", order);
 return order;
 };
 // 🔹 Lấy order theo id
-export const getOrderById = async (orderId: string) => {
+export const getOrderById = async (id: string) => {
   try {
-     // 🔹 Đọc orders từ AsyncStorage nếu có, fallback sang mockData
-    const ordersData = await AsyncStorage.getItem("orders");
-    const storedOrders = ordersData ? JSON.parse(ordersData) : orders;
+    const res = await fetch(`${API_URL}/${id}`);
+    if (!res.ok) throw new Error("Không lấy được đơn hàng");
+    const orderData = await res.json();
 
-    const order = storedOrders.find((o: any) => o.id === orderId);
-    if (!order) return null;
+    // 🔹 Lấy chi tiết sản phẩm
+    const itemsWithDetails = await Promise.all(
+      orderData.items.map(async (item: any) => {
+        const product = await getProductDetails(item.idProduct).catch(() => null);
+        if (!product) console.warn(`⚠️ Sản phẩm không tồn tại: ${item.idProduct}`);
+        return { ...item, product: product || null, subtotal: (item.quantity || 1) * (product?.price || 0) };
+      })
+    );
 
-    // 🔹 Lấy thông tin nhà hàng
-    const restaurant = restaurants.find((r) => r.id === order.idRestaurant);
-    const image =
-      restaurantImages[order.idRestaurant as keyof typeof restaurantImages] ||
-      null;
-
-    // 🔹 Tính số món
-    const itemCount =
-      order.items?.reduce((sum: number, i: any) => sum + i.quantity, 0) || 0;
-
-    return {
-      ...order,
-      restaurant: restaurant
-        ? { ...restaurant, image_url: image }
-        : {
-            id: null,
-            name: "Chưa chọn nhà hàng",
-            estimated_delivery_time: 0,
-            rating: 0,
-            delivery_fee: 0,
-            image_url: require("../assets/images/br1.jpg"),
-          },
-      itemCount,
-    };
-  } catch (error) {
-    console.error("❌ Lỗi khi lấy order theo id:", error);
+    return { ...orderData, items: itemsWithDetails };
+  } catch (err) {
+    console.error("❌ Lỗi getOrderById:", err);
     return null;
   }
 };
-// 🗑️ Xóa item khỏi order
+
+// �️ Xóa item khỏi order
 export const removeItemFromOrder = async (
   userId: string,
   orderId: string,
@@ -343,3 +360,249 @@ export const removeItemFromOrder = async (
     return null;
   }
 };
+export const updateItemInOrder = async (
+  userId: string,
+  orderId: string,
+  itemId: string,
+  quantity: number,
+  note: string
+) => {
+  try {
+    const ordersData = await AsyncStorage.getItem("orders");
+    const cartsData = await AsyncStorage.getItem("carts");
+
+    const storedOrders = ordersData ? JSON.parse(ordersData) : [];
+    const storedCarts = cartsData ? JSON.parse(cartsData) : [];
+
+    // 🔹 Tìm order của user
+    const order = storedOrders.find(
+      (o: any) => o.id === orderId && o.userId === userId
+    );
+    if (!order) {
+      console.warn("❌ Không tìm thấy order:", orderId);
+      return null;
+    }
+
+    // 🔹 Cập nhật item trong order
+    order.items = order.items.map((item: any) =>
+      String(item.idProduct) === String(itemId)
+        ? {
+            ...item,
+            quantity,
+            note,
+            subtotal: (item.price || 0) * quantity,
+          }
+        : item
+    );
+
+    // 🔹 Tính lại tổng tiền
+    order.total = order.items.reduce(
+      (sum: number, i: any) => sum + (i.subtotal || 0),
+      0
+    );
+
+    // 🔹 Cập nhật tổng tiền cart tương ứng
+    const cart = storedCarts.find((c: any) => c.userId === userId);
+    if (cart) {
+      cart.total = storedOrders
+        .filter((o: any) => o.idCart === cart.id)
+        .reduce((sum: number, o: any) => sum + o.total, 0);
+    }
+
+    // 🔹 Lưu lại
+    await AsyncStorage.setItem("orders", JSON.stringify(storedOrders));
+    await AsyncStorage.setItem("carts", JSON.stringify(storedCarts));
+
+    console.log("✅ Đã cập nhật sản phẩm trong order:", orderId);
+    return order;
+  } catch (error) {
+    console.error("❌ Lỗi updateItemInOrder:", error);
+    return null;
+  }
+};
+// 🔹 Lấy đơn hàng hiện tại (status = "chua_dat") của user
+export const getCurrentOrder = async (userId: string) => {
+  try {
+    // 🔹 Đọc dữ liệu từ AsyncStorage, nếu không có thì dùng mockData
+    const ordersData = await AsyncStorage.getItem("orders");
+    const storedOrders = ordersData ? JSON.parse(ordersData) : orders;
+
+    // 🔹 Tìm đơn hàng đang mở (chưa đặt) của user
+    const currentOrder = storedOrders.find(
+      (o: any) => o.userId === userId && o.status === "chua_dat"
+    );
+    if (!currentOrder) return null;
+
+    // 🔹 Lấy thông tin nhà hàng
+    const restaurant = restaurants.find((r) => r.id === currentOrder.idRestaurant);
+    const image =
+      restaurantImages[
+        currentOrder.idRestaurant as keyof typeof restaurantImages
+      ] || null;
+
+    // 🔹 Tính tổng số lượng món
+    const itemCount =
+      currentOrder.items?.reduce((sum: number, i: any) => sum + i.quantity, 0) || 0;
+
+    // ✅ Trả về dữ liệu chi tiết
+    return {
+      ...currentOrder,
+      restaurant: restaurant
+        ? { ...restaurant, image_url: image }
+        : {
+            id: null,
+            name: "Chưa chọn nhà hàng",
+            estimated_delivery_time: 0,
+            rating: 0,
+            delivery_fee: 0,
+            image_url: require("../assets/images/br1.jpg"),
+          },
+      itemCount,
+    };
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy đơn hàng hiện tại:", error);
+    return null;
+  }
+};
+// xóa item trong đơn hàng 
+//lấy tất cả khuyến mãi 
+export const getAllPromotions = () => {
+  return [...promotions];
+}
+//lấy khuyến mãi theo type
+export const getPromotionsByType = (type: string) => {
+  return promotions.filter((promo) => promo.type === type);
+};
+// dataService.ts
+export const getValidPromotions = (
+  subtotal: number = 0,
+  userType: string = "all",
+  paymentMethod?: string,
+  restaurantId?: string
+) => {
+  const now = new Date();
+
+  return promotions
+    .map((promo) => {
+      const from = new Date(promo.validFrom);
+      const to = new Date(promo.validTo);
+      to.setHours(23, 59, 59, 999);
+
+      const minOrder = Number(promo.condition?.minOrder || 0);
+
+      // 1️⃣ Kiểm tra thời gian
+      const isInDateRange = now >= from && now <= to;
+
+      // 2️⃣ Kiểm tra subtotal
+      const isOrderEnough = subtotal >= minOrder;
+
+      // 3️⃣ Kiểm tra paymentMethod
+      const isPaymentMatch =
+        !promo.condition?.paymentMethod || promo.condition.paymentMethod === paymentMethod;
+
+      // 4️⃣ Kiểm tra nhà hàng
+      let isRestaurantMatch = true;
+      if (promo.type === "restaurant") {
+        if (restaurantId) {
+          isRestaurantMatch = promo.restaurantId === restaurantId;
+        } else {
+          // nếu không có restaurantId, promo restaurant không được chọn
+          isRestaurantMatch = false;
+        }
+      }
+
+      return {
+        ...promo,
+        isEligible: isInDateRange && isOrderEnough && isPaymentMatch && isRestaurantMatch,
+      };
+    })
+    .sort((a, b) => {
+      // Các promo đủ điều kiện (isEligible = true) lên đầu
+      if (a.isEligible && !b.isEligible) return -1;
+      if (!a.isEligible && b.isEligible) return 1;
+      return 0;
+    });
+};
+// 🔹 Lấy đơn hàng của user theo userId và chỉ lọc trạng thái đã giao / đang giao / đã hủy
+export const getOrdersByUserId = async (userId: string) => {
+  try {
+    const stored = await AsyncStorage.getItem("orders");
+    const allOrders = stored ? JSON.parse(stored) : orders;
+
+    // Lọc theo userId
+    const userOrders = allOrders.filter(
+      (o: any) =>
+        o.userId === userId &&
+        ["dang_giao", "da_giao", "da_huy"].includes(o.status)
+    );
+
+    return userOrders;
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy đơn hàng của user:", error);
+    return [];
+  }
+};
+
+export const getValidPromotionsByType = async (type: "app" | "restaurant") => {
+  const now = new Date();
+  const validPromos = promotions.filter((p) => {
+    const from = new Date(p.validFrom);
+    const to = new Date(p.validTo);
+    to.setHours(23, 59, 59, 999);
+    return p.type === type && now >= from && now <= to;
+  });
+  return validPromos;
+};
+// 📦 Lấy tất cả đơn hàng chưa được shipper nhận
+export const getUnacceptedOrders = async () => {
+  try {
+    // Đọc dữ liệu đơn hàng từ AsyncStorage (nếu đã lưu)
+    const stored = await AsyncStorage.getItem("ordersMock");
+    const allOrders = stored ? JSON.parse(stored) : ordersMock;
+
+    // Lọc ra đơn hàng chưa nhận (isAccepted = false)
+    const unaccepted = allOrders.filter((o: any) => !o.isAccepted);
+    return unaccepted;
+  } catch (error) {
+    console.error("❌ Lỗi khi lấy đơn hàng chưa nhận:", error);
+    return [];
+  }
+};
+
+// ✅ Tạo đơn hàng mới khi khách nhấn "Order Now"
+export const addNewOrder = async (newOrder: any) => {
+  try {
+    // 1️⃣ Lấy danh sách đơn hiện có
+    const stored = await AsyncStorage.getItem("ordersMock");
+    const allOrders = stored ? JSON.parse(stored) : ordersMock;
+
+    // 2️⃣ Thêm đơn mới (chưa được nhận)
+    const orderToAdd = {
+      id: Date.now().toString(), // tạo id tạm
+      ...newOrder,
+      isAccepted: false,
+    };
+
+    const updatedOrders = [...allOrders, orderToAdd];
+
+    // 3️⃣ Lưu lại vào AsyncStorage
+    await AsyncStorage.setItem("ordersMock", JSON.stringify(updatedOrders));
+
+    console.log("✅ Thêm đơn hàng mới:", orderToAdd);
+    return orderToAdd;
+  } catch (error) {
+    console.error("❌ Lỗi khi thêm đơn hàng:", error);
+    return null;
+  }
+};
+
+export async function getOrders() {
+  try {
+    const res = await fetch(`${API_URL}/orders`);
+    if (!res.ok) throw new Error("Không thể tải danh sách đơn hàng");
+    return await res.json();
+  } catch (err) {
+    console.error("Lỗi khi lấy đơn hàng:", err);
+    return [];
+  }
+}

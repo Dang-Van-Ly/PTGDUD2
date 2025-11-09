@@ -1,110 +1,128 @@
-import React, { useState, useCallback } from "react";
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useFocusEffect, useRouter } from "expo-router";
-import { getCartByUser, getRestaurantImageById } from "../../data/dataService";
-
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, FlatList, Image } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useRouter } from 'expo-router';
+import { getOrders } from '../../data/dataService';
+import { restaurantImages } from '../../data/mockData';
+import { useFocusEffect } from '@react-navigation/native';
+import { API_URL } from '../(tabs)/home';
 export default function OrdersScreen() {
   const router = useRouter();
   const [orders, setOrders] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const fetchOrders = async () => {
-    try {
-      const userData = await AsyncStorage.getItem("currentUser");
-      if (!userData) return;
+useFocusEffect(
+  React.useCallback(() => {
+    const fetchOrders = async () => {
+      if (!userId) return;
+      try {
+        const allOrders: any[] = await getOrders();
 
-      const parsedUser = JSON.parse(userData);
-      setUser(parsedUser);
+        // Tìm các order rỗng để xóa
+        const emptyOrders = allOrders.filter(
+          o => o.userId === userId && (o.items?.length || 0) === 0
+        );
 
-      const data = await getCartByUser(parsedUser.id);
-      if (data && Array.isArray(data.orders)) {
-        setOrders(data.orders);
-      } else {
-        setOrders([]);
-      }
-
-      await AsyncStorage.removeItem("cartUpdated");
-    } catch (error) {
-      console.error("Lỗi khi lấy orders:", error);
-    }
-  };
-
-  useFocusEffect(
-    useCallback(() => {
-      const checkAndReload = async () => {
-        const updated = await AsyncStorage.getItem("cartUpdated");
-        if (updated === "true" || orders.length === 0) {
-          await fetchOrders();
+        // Xóa order rỗng (nếu backend hỗ trợ)
+        for (let eo of emptyOrders) {
+          await fetch(`${API_URL}/orders/${eo.id}`, {
+            method: "DELETE",
+          });
         }
-      };
-      checkAndReload();
-    }, [])
+
+        // Lọc lại orders còn item
+        const userOrders = allOrders.filter(
+          o => o.userId === userId && (o.items?.length || 0) > 0 && o.status === "chua_dat"
+        );
+
+        setOrders(userOrders);
+      } catch (error) {
+        console.log("Lỗi lấy orders:", error);
+      }
+    };
+    fetchOrders();
+  }, [userId])
+);
+
+
+  // Lấy user hiện tại
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const userData = await AsyncStorage.getItem("currentUser");
+        if (userData) {
+          const user = JSON.parse(userData);
+          setUserId(user.id || user._id);
+        }
+      } catch (error) {
+        console.log(error);
+      }
+    };
+    fetchUser();
+  }, []);
+
+  // Lấy orders từ backend
+  useEffect(() => {
+    const fetchOrders = async () => {
+      if (!userId) return;
+      try {
+        const allOrders: any[] = await getOrders();
+        const userOrders = allOrders.filter(
+          o => o.userId === userId && o.status === "chua_dat"
+        );
+        setOrders(userOrders);
+      } catch (error) {
+        console.log("Lỗi lấy orders:", error);
+      }
+    };
+    fetchOrders();
+  }, [userId]);
+
+  const renderOrder = ({ item }: any) => (
+    <TouchableOpacity 
+      style={styles.card} 
+      onPress={() => router.push(`/orders/${item.id}`)}
+    >
+      <Image
+        source={
+          item.idRestaurant
+            ? restaurantImages[item.idRestaurant]
+            : { uri: 'https://via.placeholder.com/60' }
+        }
+        style={styles.thumbnail}
+      />
+      <View style={{ marginLeft: 10, flex: 1 }}>
+        <Text style={styles.orderId}>Mã đơn: {item.id}</Text>
+        <Text style={styles.orderDate}>Ngày tạo: {item.createdAt?.slice(0,10)}</Text>
+        <Text style={styles.orderStatus}>Trạng thái: Chưa đặt</Text>
+        <Text style={styles.total}>Tổng: {item.total?.toLocaleString()}₫</Text>
+        <Text style={styles.itemCount}>Số món: {item.items?.length || 0}</Text>
+      </View>
+    </TouchableOpacity>
   );
 
   return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>
-        🛒 {user?.hoTen ? `${user.hoTen}'s Cart` : "My Cart"}
-      </Text>
-
-      {orders.length === 0 ? (
-        <Text style={styles.empty}>Bạn chưa có đơn hàng nào</Text>
-      ) : (
-        orders.map((order, i) => {
-          const restaurant = order.restaurant || {};
-          const restaurantImg =
-            getRestaurantImageById(restaurant.id) || restaurant.image_url;
-
-          return (
-            <TouchableOpacity
-              key={i}
-              style={styles.card}
-              onPress={() => router.push(`/orders/${order.id}`)} // Chỉ truyền id
-            >
-              <Image
-                source={
-                  typeof restaurantImg === "number"
-                    ? restaurantImg
-                    : { uri: restaurantImg }
-                }
-                style={styles.cardImg}
-              />
-
-              <View style={{ flex: 1 }}>
-                <Text style={styles.cardTitle} numberOfLines={2}>
-                  {restaurant.name || "Chưa chọn nhà hàng"}
-                </Text>
-                <Text style={styles.cardSub}>
-                  🛍 {order.items?.length || 0} món • 💰{" "}
-                  {order.total?.toLocaleString() || 0} đ
-                </Text>
-              </View>
-            </TouchableOpacity>
-          );
-        })
-      )}
-    </ScrollView>
+    <View style={styles.page}>
+     
+      <FlatList
+        data={orders}
+        keyExtractor={item => item.id}
+        renderItem={renderOrder}
+        ListEmptyComponent={<Text style={{textAlign:'center', marginTop:20}}>Bạn chưa có đơn hàng nào</Text>}
+        contentContainerStyle={{ paddingBottom: 20 }}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: "#fff", paddingHorizontal: 16 },
-  header: { fontSize: 22, fontWeight: "bold", color: "#333", marginTop: 20, marginBottom: 10 },
-  empty: { fontSize: 16, color: "#888", textAlign: "center", marginTop: 50 },
-  card: {
-    flexDirection: "row",
-    backgroundColor: "#f8f9fa",
-    borderRadius: 12,
-    padding: 10,
-    shadowColor: "#000",
-    shadowOpacity: 0.1,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 3,
-    elevation: 2,
-    marginBottom: 10,
-  },
-  cardImg: { width: 90, height: 90, borderRadius: 10, marginRight: 10 },
-  cardTitle: { fontSize: 16, fontWeight: "bold", color: "#222" },
-  cardSub: { fontSize: 14, color: "#555", marginVertical: 2 },
+  page: { flex: 1, backgroundColor: '#fff', paddingTop: 6, paddingHorizontal: 16 },
+  header: { fontSize: 20, fontWeight: '700', marginBottom: 20 },
+  card: { flexDirection: 'row', padding: 12, backgroundColor:'#f7f7f7', borderRadius:10, marginBottom:12, alignItems:'center' },
+  thumbnail: { width: 90, height: 90, borderRadius: 8 },
+  orderId: { fontWeight: '700', color:'#333' },
+  orderDate: { fontSize: 13, color:'#777', marginVertical:2 },
+  orderStatus: { fontSize: 13, color:'#FF9800' },
+  total: { fontWeight:'700', color:'#00BCD4', marginTop:4 },
+  itemCount: { fontSize: 13, color:'#777', marginTop:2 }
 });

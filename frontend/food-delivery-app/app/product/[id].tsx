@@ -1,11 +1,10 @@
-import React, { useState, useMemo } from "react";
-import { View, Text, StyleSheet, Image, ScrollView, Pressable, Platform, StatusBar } from "react-native";
-import { useLocalSearchParams, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
-import { getProductDetails,addItemToCurrentOrder } from "../../data/dataService";
-import { BlurView } from "expo-blur";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-
+import { router, useLocalSearchParams } from "expo-router";
+import React, { useEffect, useMemo, useState } from "react";
+import { Image, Platform, Pressable, ScrollView, StatusBar, StyleSheet, Text, View } from "react-native";
+import { getProductDetails} from "../../data/dataService";
+import { API_URL } from "../(tabs)/home";
 export const options = { headerShown: false };
 
 interface SelectedChoice {
@@ -14,11 +13,84 @@ interface SelectedChoice {
 }
 
 export default function ProductDetailScreen() {
-  const { id } = useLocalSearchParams();
-  const product = getProductDetails(String(id));
-  const [selectedAddons, setSelectedAddons] = useState<Set<number>>(new Set());
-  const [selectedChoices, setSelectedChoices] = useState<SelectedChoice[]>([]);
-  const [quantity, setQuantity] = useState(1);
+const [product, setProduct] = useState<any>(null);
+const [loading, setLoading] = useState(true);
+
+  const params = useLocalSearchParams();
+  const { id, isEditing, orderId, itemId, quantity: initQuantity, selectedOptions, selectedAddons: initAddons, note } = params;
+  // danh sách yêu thích 
+  const handleToggleFavorite = async () => {
+  try {
+    const favData = await AsyncStorage.getItem("favorites");
+    let favorites: any[] = favData ? JSON.parse(favData) : [];
+
+    // Kiểm tra xem sản phẩm đã có trong favorites chưa
+    const exists = favorites.some(f => f.id === product.id);
+
+    if (exists) {
+      // Nếu có rồi thì xóa khỏi danh sách
+      favorites = favorites.filter(f => f.id !== product.id);
+    } else {
+      // Nếu chưa có thì thêm vào
+      favorites.push({
+        id: product.id,
+        name: product.name,
+        image_url: product.image_url,
+        price: product.price,
+      });
+    }
+
+    await AsyncStorage.setItem("favorites", JSON.stringify(favorites));
+    alert(exists ? "❌ Đã xóa khỏi yêu thích!" : "❤️ Đã thêm vào yêu thích!");
+  } catch (error) {
+    console.error("Lỗi cập nhật yêu thích:", error);
+  }
+};
+
+useEffect(() => {
+  const fetchProduct = async () => {
+    try {
+      const data = await getProductDetails(String(id));
+      setProduct(data);
+    } catch (e) {
+      console.error("Lỗi khi tải chi tiết sản phẩm:", e);
+    } finally {
+      setLoading(false);
+    }
+  };
+  fetchProduct();
+}, [id]);
+  // Parse initial values if editing
+  const initialAddons = useMemo(() => {
+    if (initAddons) {
+      try {
+        const addonsArray = typeof initAddons === 'string' ? JSON.parse(initAddons) : initAddons;
+        return new Set<number>(addonsArray as number[]);
+      } catch (e) {
+        console.error('Error parsing addons:', e);
+      }
+    }
+    return new Set<number>();
+  }, [initAddons]);
+
+  const initialChoices = useMemo(() => {
+    if (selectedOptions) {
+      try {
+        const optionsArray = typeof selectedOptions === 'string' ? JSON.parse(selectedOptions) : selectedOptions;
+        return optionsArray.map((opt: any) => ({
+          optionIndex: opt.optionIndex,
+          choiceIndex: opt.choiceIndex
+        }));
+      } catch (e) {
+        console.error('Error parsing options:', e);
+      }
+    }
+    return [];
+  }, [selectedOptions]);
+
+  const [selectedAddons, setSelectedAddons] = useState<Set<number>>(initialAddons);
+  const [selectedChoices, setSelectedChoices] = useState<SelectedChoice[]>(initialChoices);
+  const [quantity, setQuantity] = useState(initQuantity ? Number(initQuantity) : 1);
 
   const totalPrice = useMemo(() => {
     let total = product?.price || 0;
@@ -60,43 +132,69 @@ const handleAddToCart = async () => {
   try {
     const userData = await AsyncStorage.getItem("currentUser");
     if (!userData) {
-      alert("⚠️ Bạn cần đăng nhập để thêm sản phẩm vào giỏ hàng!");
+      alert("⚠️ Bạn cần đăng nhập!");
       return;
     }
 
     const user = JSON.parse(userData);
+      // 🔹 Tính subtotal bao gồm giá gốc + addons + options
+    const subtotal =
+      (product.price || 0) +
+      Array.from(selectedAddons).reduce(
+        (sum, i) => sum + Number(product.addons[i]?.price || 0),
+        0
+      ) +
+      selectedChoices.reduce(
+        (sum, sc) =>
+          sum +
+          Number(
+            product.options[sc.optionIndex]?.choices[sc.choiceIndex]
+              ?.additionalPrice || 0
+          ),
+        0
+      );
 
-    // Ghi chú (addons + options)
-    const selectedAddonNames =
-      product.addons
-        ?.filter((_: any, i: number) => selectedAddons.has(i))
-        .map((a: any) => a.name) || [];
+    const total = subtotal * quantity;
+    const generatedNote = [
+      // options
+      ...selectedChoices.map(sc => {
+        const option = product.options[sc.optionIndex];
+        const choice = option.choices[sc.choiceIndex];
+        return `${option.name}: ${typeof choice === 'string' ? choice : choice.name}`;
+      }),
+      // addons
+      ...Array.from(selectedAddons).map(i => `Topping: ${product.addons[i].name}`)
+    ].join(", ");
+    const res = await fetch(`${API_URL}/orders/add-item`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: user.id,
+        productId: product.id,
+        quantity: quantity,
+        note: generatedNote, // ghi note tự động
+        subtotal: total,
+      }),
+    });
 
-    const selectedOptionNames =
-      selectedChoices.map((sc) => {
-        const opt = product.options?.[sc.optionIndex];
-        const choice = opt?.choices?.[sc.choiceIndex];
-        return `${opt?.name}: ${choice?.name || choice}`;
-      }) || [];
+    const data = await res.json();
 
-    const note = [...selectedOptionNames, ...selectedAddonNames].join(", ");
-
-    // 🛒 Gọi hàm thêm sản phẩm
-    const order = addItemToCurrentOrder(user.id, product.id, quantity, note);
-
-    if (order) {
-      console.log("🛍 Order updated:", order);
-      await AsyncStorage.setItem("cartUpdated", "true"); // 🔥 báo OrdersScreen reload
-      alert("✅ Đã thêm vào giỏ hàng!");
-      router.back(); // quay lại OrdersScreen
+    if (res.ok) {
+      alert("✅ Đã thêm sản phẩm vào giỏ hàng!");
+      console.log("Order:", data.order);
+      router.back();
     } else {
-      alert("❌ Thêm thất bại!");
+      alert("❌ " + data.message);
     }
   } catch (error) {
     console.error("Lỗi thêm sản phẩm:", error);
   }
 };
 
+ // ✅ Xác định trạng thái nút, sau khi product và selectedChoices đã có
+  const isAddDisabled = product.options?.length
+    ? selectedChoices.length !== product.options.length
+    : false;
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scrollView} bounces={false}>
@@ -109,10 +207,16 @@ const handleAddToCart = async () => {
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </Pressable>
           <Pressable 
-            style={[styles.favoriteButton, styles.floatingButton]}
-          >
-            <Ionicons name="heart-outline" size={24} color="#fff" />
-          </Pressable>
+  style={[styles.favoriteButton, styles.floatingButton]}
+  onPress={handleToggleFavorite}
+>
+  <Ionicons
+    name={selectedAddons.has(product.id) ? "heart" : "heart-outline"}
+    size={24}
+    color="#fff"
+  />
+</Pressable>
+
         </View>
 
         <View style={styles.content}>
@@ -247,22 +351,20 @@ const handleAddToCart = async () => {
         </View>
 
    {/* 🔒 Nút thêm bị vô hiệu hóa khi chưa chọn đủ option */}
-<Pressable
-  style={[
-    styles.addButton,
-    (!product.options?.length || selectedChoices.length === product.options.length)
-      ? null
-      : { backgroundColor: "#ccc" } // đổi màu xám khi chưa đủ lựa chọn
-  ]}
-  disabled={product.options?.length && selectedChoices.length !== product.options.length}
-  onPress={handleAddToCart}
->
-  <Text style={styles.addButtonText}>
-    {product.options?.length && selectedChoices.length !== product.options.length
-      ? "Chọn đầy đủ tùy chọn trước"
-      : `Thêm vào giỏ hàng ($${(totalPrice * quantity).toLocaleString()})`}
-  </Text>
-</Pressable>
+   
+  <Pressable
+          style={[styles.addButton, isAddDisabled && { backgroundColor: "#ccc" }]}
+          disabled={isAddDisabled}
+          onPress={handleAddToCart}
+        >
+          <Text style={styles.addButtonText}>
+            {isAddDisabled
+              ? "Chọn đầy đủ tùy chọn trước"
+              : isEditing === 'true'
+                ? `Cập nhật giỏ hàng ($${(totalPrice * quantity).toLocaleString()})`
+                : `Thêm vào giỏ hàng ($${(totalPrice * quantity).toLocaleString()})`}
+          </Text>
+        </Pressable>
 
 
       </View>

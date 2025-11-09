@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import RestaurantList from "../../components/restaurant/RestauerantList";
-
+import axios from "axios";
 import {
   View,
   Text,
@@ -13,16 +13,17 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import {
-  getAllRestaurants,
-  getRestaurantImageById,
-} from "../../data/dataService";
+import {getRestaurantImageById,} from "../../data/dataService";
 import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+
+export const API_URL = "http://10.79.255.95:5000/api"; // Android Emulator
+
 
 export default function TabOneScreen() {
   const router = useRouter();
   const [userName, setUserName] = useState("");
+  const [restaurantList, setRestaurantList] = useState<any[]>([]); // thêm state
 
   // 🔹 Lấy thông tin user từ AsyncStorage (nếu đã đăng nhập)
   useEffect(() => {
@@ -38,6 +39,25 @@ export default function TabOneScreen() {
       }
     };
     fetchUser();
+  }, []);
+// 🔹 Lấy restaurant trực tiếp từ API
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/restaurants`, { timeout: 5000 });
+        setRestaurantList(res.data || []);
+      } catch (error: any) {
+        if (error.response) {
+          console.error("Server error:", error.response.data);
+        } else if (error.request) {
+          console.error("No response received:", error.request);
+        } else {
+          console.error("Error setting up request:", error.message);
+        }
+        setRestaurantList([]); // fallback
+      }
+    };
+    fetchRestaurants();
   }, []);
 
   const banners = [
@@ -75,7 +95,7 @@ export default function TabOneScreen() {
     { id: 5, title: "Snack", color: "#f5cbcc", img: require("../../assets/images/snack.png") },
   ];
 
-  const restaurantList = getAllRestaurants();
+
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -152,10 +172,19 @@ export default function TabOneScreen() {
         </ScrollView>
 
         {/* VOUCHER */}
-        <View style={styles.voucherBox}>
-          <FontAwesome name="gift" size={20} color="#00796b" style={{ marginRight: 4, marginTop: 2 }} />
-          <Text style={styles.voucherText}>You have 5 vouchers here</Text>
-        </View>
+   {/* VOUCHER */}
+<TouchableOpacity
+  style={styles.voucherBox}
+  onPress={() => router.push("/khuyenmai")} // 👈 chuyển sang trang khuyến mãi
+>
+  <FontAwesome
+    name="gift"
+    size={20}
+    color="#00796b"
+    style={{ marginRight: 4, marginTop: 2 }}
+  />
+  <Text style={styles.voucherText}>You have 5 vouchers here</Text>
+</TouchableOpacity>
 
         {/* COLLECTIONS */}
         <View style={styles.section}>
@@ -187,7 +216,7 @@ export default function TabOneScreen() {
           </View>
 
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {[...restaurantList]
+            {restaurantList
               .sort((a, b) => {
                 if (a.estimated_delivery_time !== b.estimated_delivery_time)
                   return a.estimated_delivery_time - b.estimated_delivery_time;

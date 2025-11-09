@@ -1,30 +1,80 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, Image, FlatList, Pressable } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import {
-  getAllRestaurants,
   getRestaurantImageById,
   getAverageRatingByRestaurantId,
-  getReviewsByRestaurantId,
-  getProductsByRestaurantId,
+
 } from "../../data/dataService";
 
 import { router } from "expo-router";
-
+import axios from "axios";
+import { API_URL } from "../(tabs)/home";
 export const options = {
   headerShown: false,
 };
 
 export default function RestaurantDetailScreen() {
   const { id } = useLocalSearchParams();
-  const restaurantList = getAllRestaurants();
+    const [restaurantList, setRestaurantList] = useState<any[]>([]); // thêm state
+  
+ // 🔹 Lấy restaurant trực tiếp từ API
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/restaurants`, { timeout: 5000 });
+        setRestaurantList(res.data || []);
+      } catch (error: any) {
+        if (error.response) {
+          console.error("Server error:", error.response.data);
+        } else if (error.request) {
+          console.error("No response received:", error.request);
+        } else {
+          console.error("Error setting up request:", error.message);
+        }
+        setRestaurantList([]); // fallback
+      }
+    };
+    fetchRestaurants();
+  }, []);
+useEffect(() => {
+  const fetchReviews = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/reviews?restaurantId=${id}`);
+      setReviewList(res.data || []);
+    } catch (error) {
+      console.error("Error fetching reviews:", error);
+      setReviewList([]);
+    }
+  };
+
+  fetchReviews();
+}, [id]);
+
   const restaurant = restaurantList.find((r) => String(r.id) === String(id));
   const rating = getAverageRatingByRestaurantId(String(id));
-  const reviewList = getReviewsByRestaurantId(String(id));
+const [reviewList, setReviewList] = useState<any[]>([]);
   const reviewsCount = reviewList.length;
-  const producList = getProductsByRestaurantId(String(id))
+const [producList, setProductList] = useState<any[]>([]);
   const [showAllForYou, setShowAllForYou] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+
+useEffect(() => {
+  const fetchProducts = async () => {
+    try {
+      const res = await axios.get(`${API_URL}/products?restaurant_id=${id}`);
+      setProductList(res.data || []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+      setProductList([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  fetchProducts();
+}, [id]);
   // Sắp xếp theo rating (giảm dần) rồi theo purchase_count (giảm dần)
 const sortedProducts = [...producList].sort((a, b) => {
   if (b.rating === a.rating) {
@@ -192,41 +242,39 @@ const sortedProducts = [...producList].sort((a, b) => {
             </View>
 
             <FlatList
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              data={reviewList}
-              keyExtractor={(item, index) => index.toString()}
-              renderItem={({ item }) => (
-                <View style={styles.reviewCard}>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <Image
-                      source={
-                        item.user.avatar && typeof item.user.avatar === "string"
-                          ? { uri: item.user.avatar }
-                          : item.user.avatar
-                      }
-                      style={styles.reviewAvatar}
-                    />
-                    <View style={{ marginLeft: 10 }}>
-                      <Text style={styles.reviewName}>{item.user.name}</Text>
-                      <Text style={styles.reviewTime}>A day ago</Text>
-                    </View>
-                  </View>
-                  <View style={{ flexDirection: "row", marginTop: 5 }}>
-                    {[...Array(5)].map((_, i) => (
-                      <Ionicons
-                        key={i}
-                        name={i < Math.floor(item.rating) ? "star" : "star-outline"}
-                        size={14}
-                        color="#FFD700"
-                        style={{ marginRight: 2 }}
-                      />
-                    ))}
-                  </View>
-                  <Text style={styles.reviewText}>{item.comment}</Text>
-                </View>
-              )}
-            />
+  horizontal
+  showsHorizontalScrollIndicator={false}
+  data={reviewList}
+  keyExtractor={(item, index) => index.toString()}
+  renderItem={({ item }) => (
+    <View style={styles.reviewCard}>
+      <View style={{ flexDirection: "row", alignItems: "center" }}>
+      <Image
+  source={{ uri: item.user_avatar || "https://i.pravatar.cc/35" }}
+  style={styles.reviewAvatar}
+/>
+
+        <View style={{ marginLeft: 10 }}>
+          <Text style={styles.reviewName}>{item.user_name || "Anonymous"}</Text>
+          <Text style={styles.reviewTime}>A day ago</Text>
+        </View>
+      </View>
+      <View style={{ flexDirection: "row", marginTop: 5 }}>
+        {[...Array(5)].map((_, i) => (
+          <Ionicons
+            key={i}
+            name={i < Math.floor(item.rating) ? "star" : "star-outline"}
+            size={14}
+            color="#FFD700"
+            style={{ marginRight: 2 }}
+          />
+        ))}
+      </View>
+      <Text style={styles.reviewText}>{item.comment}</Text>
+    </View>
+  )}
+/>
+
           </View>
 
           {/* Combo */}

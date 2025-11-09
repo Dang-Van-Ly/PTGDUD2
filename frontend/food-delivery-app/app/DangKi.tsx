@@ -1,7 +1,7 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ScrollView, Image } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
+import React, { useState } from "react";
+import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { users } from "../data/mockData";
 
 export default function RegisterScreen() {
@@ -30,7 +30,7 @@ export default function RegisterScreen() {
 
     // Thêm người dùng mới vào mảng mock
     const newUser = {
-      id: users.length + 1,
+      id: String(users.length + 1),
       hoTen,
       sdt,
       matKhau,
@@ -38,6 +38,7 @@ export default function RegisterScreen() {
       gioiTinh,
       ngaySinh,
       diaChi,
+      addrs: [],
       hinhAnh: require("../assets/images/avatar.png"),
     };
 

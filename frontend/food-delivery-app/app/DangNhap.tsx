@@ -34,26 +34,33 @@ export default function LoginScreen() {
     return true;
   };
 
-  const onLogin = async () => {
-    if (!validate()) return;
-    setLoading(true);
-    try {
-      const user = loginUser(phone, password);
-      setTimeout(async () => {
-        setLoading(false);
-        if (user) {
-          await AsyncStorage.setItem("currentUser", JSON.stringify(user));
-          Alert.alert("Thành công", `Chào mừng ${user.hoTen}!`);
-          router.replace("/(tabs)/home"); // 👉 chuyển sang tab Account
-        } else {
-          Alert.alert("Lỗi", "Sai số điện thoại hoặc mật khẩu");
-        }
-      }, 700);
-    } catch (err) {
+const onLogin = async () => {
+  if (!validate()) return;
+  setLoading(true);
+  try {
+    const user = loginUser(phone, password);
+    setTimeout(async () => {
       setLoading(false);
-      Alert.alert("Lỗi", "Có lỗi xảy ra, vui lòng thử lại sau.");
-    }
-  };
+      if (user) {
+        await AsyncStorage.setItem("currentUser", JSON.stringify(user));
+        Alert.alert("Thành công", `Chào mừng ${user.hoTen}!`);
+
+        // ✅ Điều hướng theo role
+        if (user.role === "shipper") {
+          router.replace("/shipper/dashboard"); // trang Shipper
+        } else {
+          router.replace("/(tabs)/home"); // trang Home bình thường
+        }
+      } else {
+        Alert.alert("Lỗi", "Sai số điện thoại hoặc mật khẩu");
+      }
+    }, 700);
+  } catch (err) {
+    setLoading(false);
+    Alert.alert("Lỗi", "Có lỗi xảy ra, vui lòng thử lại sau.");
+  }
+};
+
 
   return (
     <SafeAreaView style={styles.safe}>

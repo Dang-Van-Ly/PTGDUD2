@@ -1,7 +1,7 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import Swiper from "react-native-swiper";
 import { ImageBackground } from "react-native";
-
+import { API_URL } from "../(tabs)/home";
 import {
   View,
   Text,
@@ -13,16 +13,21 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { getAllRestaurants, getRestaurantImageById } from "../../data/dataService";
+import { getAllRestaurants } from "../../data/dataService";
 import { Stack } from "expo-router";
 import RestaurantList from "@/components/restaurant/RestauerantList";
+import axios from "axios";
+
 export default function CategoryDetailScreen() {
   // id có thể là string | string[] | undefined
   const { id } = useLocalSearchParams<{ id?: string }>();
   const router = useRouter();
+const [filterType, setFilterType] = useState<string | null>(null);
+const filterLabels = ["Freeship", "Factory", "Near you"]; // các loại filter
+
 
   // đảm bảo là mảng để tránh lỗi .filter trên undefined
-  const restaurantList = getAllRestaurants();
+  const [restaurantList, setRestaurantList] = useState<any[]>([]); // thêm state
 
   // ánh xạ id -> loại món ăn (object, không phải array)
   const categoryMap: Record<string, string> = {
@@ -32,30 +37,62 @@ export default function CategoryDetailScreen() {
     "4": "Fastfood",
     "5": "Snack",
   };
-
+// 🔹 Lấy restaurant trực tiếp từ API
+  useEffect(() => {
+    const fetchRestaurants = async () => {
+      try {
+        const res = await axios.get(`${API_URL}/restaurants`, { timeout: 5000 });
+        setRestaurantList(res.data || []);
+      } catch (error: any) {
+        if (error.response) {
+          console.error("Server error:", error.response.data);
+        } else if (error.request) {
+          console.error("No response received:", error.request);
+        } else {
+          console.error("Error setting up request:", error.message);
+        }
+        setRestaurantList([]); // fallback
+      }
+    };
+    fetchRestaurants();
+  }, []);
   // Lấy categoryKey an toàn (nếu id là mảng, lấy phần tử đầu)
   const categoryKey = Array.isArray(id) ? id[0] : (id ?? "");
   const categoryName = categoryMap[categoryKey] || "";
 
   // Lọc an toàn: kiểm tra restaurantList là mảng, kiểm tra cuisine_type
-  const filteredRestaurants =
-    Array.isArray(restaurantList) && categoryName
-      ? [...restaurantList].filter((r) => {
-          if (!r) return false;
+const filteredRestaurants =
+  Array.isArray(restaurantList) && categoryName
+    ? [...restaurantList].filter((r) => {
+        if (!r) return false;
 
-          const ct = r.cuisine_type;
-          if (Array.isArray(ct)) {
-            return ct.includes(categoryName);
-          }
-           if (typeof ct === "string") {
-          return String(ct)
-            .split(",")
-            .map((s) => s.trim())
-            .includes(categoryName);
+        // 🔹 Lọc theo category
+        const ct = r.cuisine_type;
+        const matchesCategory =
+          Array.isArray(ct)
+            ? ct.includes(categoryName)
+            : typeof ct === "string"
+            ? ct.split(",").map((s) => s.trim()).includes(categoryName)
+            : false;
+
+        if (!matchesCategory) return false;
+
+        // 🔹 Lọc theo filterType (ví dụ: "Freeship")
+        if (filterType === "Freeship") {
+          return r.delivery_fee <= 10000;
         }
-          return false;
-        })
-      : [];
+  // 🔹 Lọc theo filterType
+        if (filterType === "Factory") {
+          return r.rating >= 4.5; // rating cao
+        }
+
+        if (filterType === "Near you") {
+          return r.estimated_delivery_time <= 30; // gần bạn
+        }
+        return true; // không có filterType thì giữ tất cả
+      })
+    : [];
+
   //
   const topRestaurants = [...filteredRestaurants]
   .sort((a, b) => {
@@ -86,11 +123,26 @@ export default function CategoryDetailScreen() {
         <TouchableOpacity style={styles.sortButton}>
           <Text style={styles.sortText}>Sort by ▼</Text>
         </TouchableOpacity>
-        {["Freeship", "Favorite", "Near you"].map((label, i) => (
-          <TouchableOpacity key={i} style={styles.filterTag}>
-            <Text style={styles.filterText}>{label}</Text>
-          </TouchableOpacity>
-        ))}
+     
+  {filterLabels.map((label, i) => (
+    <TouchableOpacity
+      key={i}
+      style={[
+        styles.filterTag,
+        filterType === label && { backgroundColor: "#00BCD4" },
+      ]}
+      onPress={() => setFilterType(filterType === label ? null : label)} // toggle filter
+    >
+      <Text
+        style={[
+          styles.filterText,
+          filterType === label && { color: "#fff" },
+        ]}
+      >
+        {label}
+      </Text>
+    </TouchableOpacity>
+  ))}
       </View>
 
       {/* RESTAURANT LIST */}

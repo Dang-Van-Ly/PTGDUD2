@@ -1,5 +1,3 @@
-import { ImageSourcePropType } from 'react-native';
-
 export const restaurants =[
   {
     "id": "R001",
@@ -162,19 +160,6 @@ export const restaurants =[
 
   }
 ];
-
-export const restaurantImages: { [key: string]: ImageSourcePropType }  = {
-  R001: require('../assets/images/cuahang1.jpeg'),
-  R002: require('../assets/images/cuahang2.png'),
-  R003: require('../assets/images/cuahang3.png'),
-  R004: require('../assets/images/cuahang4.png'),
-  R005: require('../assets/images/cuahang5.png'),
-  R006: require('../assets/images/cuahang6.jpg'),
-  R007: require('../assets/images/cuahang9.png'),
-  R008: require('../assets/images/cuahang8.png'),
-  R009: require('../assets/images/cuahang9.png'),
-  R010: require('../assets/images/cuahang10.png'),
-};
 
 export const products = [
   // ------------------------------ R001: Cơm Tấm Sài Gòn 79 (10 items, 4 combo) ------------------------------
@@ -1803,7 +1788,7 @@ export const users = [
     gioiTinh: "Nam",
     ngaySinh: "2003-08-15",
     diaChi: "123 Nguyễn Văn Cừ, Quận 5, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
     role: "customer", // <-- thêm role
     addrs: [
       { id: "addr001", name: "Nhà riêng", phone: "0123456789", address: "123 Nguyễn Văn Cừ, Quận 5, TP. Hồ Chí Minh", isDefault: true, latitude: 10.755, longitude: 106.666 },
@@ -1824,7 +1809,7 @@ export const users = [
     gioiTinh: "Nữ",
     ngaySinh: "2000-05-20",
     diaChi: "45 Lý Thường Kiệt, Quận 10, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
     role:"shipper",
     addrs: [
       { id: "addr003", name: "Nhà riêng", phone: "0902345678", address: "45 Lý Thường Kiệt, Quận 10, TP. Hồ Chí Minh", isDefault: true, latitude: 10.772, longitude: 106.667 }
@@ -1844,7 +1829,7 @@ export const users = [
     gioiTinh: "Nam",
     ngaySinh: "1999-11-05",
     diaChi: "78 Hai Bà Trưng, Quận 1, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
     role: "customer",
     addrs: [
       { id: "addr004", name: "Nhà riêng", phone: "0901111222", address: "78 Hai Bà Trưng, Quận 1, TP. Hồ Chí Minh", isDefault: true, latitude: 10.774, longitude: 106.699 },
@@ -1865,7 +1850,7 @@ export const users = [
     gioiTinh: "Nam",
     ngaySinh: "2002-02-14",
     diaChi: "12 Nguyễn Tri Phương, Quận 10, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr006", name: "Nhà riêng", phone: "0903222333", address: "12 Nguyễn Tri Phương, Quận 10, TP. Hồ Chí Minh", isDefault: true, latitude: 10.769, longitude: 106.660 }
@@ -1885,7 +1870,7 @@ export const users = [
     gioiTinh: "Nữ",
     ngaySinh: "2001-07-25",
     diaChi: "89 Lê Văn Sỹ, Quận 3, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr007", name: "Nhà riêng", phone: "0904333444", address: "89 Lê Văn Sỹ, Quận 3, TP. Hồ Chí Minh", isDefault: true, latitude: 10.776, longitude: 106.667 },
@@ -1906,7 +1891,7 @@ export const users = [
     gioiTinh: "Nam",
     ngaySinh: "1998-12-30",
     diaChi: "22 Nguyễn Thị Minh Khai, Quận 1, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr009", name: "Nhà riêng", phone: "0905444555", address: "22 Nguyễn Thị Minh Khai, Quận 1, TP. Hồ Chí Minh", isDefault: true, latitude: 10.780, longitude: 106.694 }
@@ -1926,7 +1911,7 @@ export const users = [
     gioiTinh: "Nữ",
     ngaySinh: "2004-04-10",
     diaChi: "55 Nguyễn Đình Chiểu, Quận 3, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
     role:"shipper",
     addrs: [
       { id: "addr010", name: "Nhà riêng", phone: "0906555666", address: "55 Nguyễn Đình Chiểu, Quận 3, TP. Hồ Chí Minh", isDefault: true, latitude: 10.776, longitude: 106.679 }
@@ -1946,7 +1931,7 @@ export const users = [
     gioiTinh: "Nam",
     ngaySinh: "2000-06-12",
     diaChi: "11 Lạc Long Quân, Quận 11, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr011", name: "Nhà riêng", phone: "0907666777", address: "11 Lạc Long Quân, Quận 11, TP. Hồ Chí Minh", isDefault: true, latitude: 10.783, longitude: 106.660 }
@@ -1966,7 +1951,7 @@ export const users = [
     gioiTinh: "Nữ",
     ngaySinh: "2001-03-09",
     diaChi: "90 Phạm Văn Đồng, Thủ Đức, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr012", name: "Nhà riêng", phone: "0908777888", address: "90 Phạm Văn Đồng, Thủ Đức, TP. Hồ Chí Minh", isDefault: true, latitude: 10.849, longitude: 106.758 }
@@ -1986,7 +1971,7 @@ export const users = [
     gioiTinh: "Nam",
     ngaySinh: "1999-09-19",
     diaChi: "77 Cách Mạng Tháng 8, Quận 10, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr013", name: "Nhà riêng", phone: "0909888999", address: "77 Cách Mạng Tháng 8, Quận 10, TP. Hồ Chí Minh", isDefault: true, latitude: 10.777, longitude: 106.675 }
@@ -2006,7 +1991,7 @@ export const users = [
     gioiTinh: "Nữ",
     ngaySinh: "2002-01-01",
     diaChi: "14 Tô Hiến Thành, Quận 10, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr014", name: "Nhà riêng", phone: "0911222333", address: "14 Tô Hiến Thành, Quận 10, TP. Hồ Chí Minh", isDefault: true, latitude: 10.770, longitude: 106.675 }
@@ -2026,7 +2011,7 @@ export const users = [
     gioiTinh: "Nam",
     ngaySinh: "1998-05-21",
     diaChi: "33 Nguyễn Oanh, Gò Vấp, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr015", name: "Nhà riêng", phone: "0912333444", address: "33 Nguyễn Oanh, Gò Vấp, TP. Hồ Chí Minh", isDefault: true, latitude: 10.826, longitude: 106.679 }
@@ -2046,7 +2031,7 @@ export const users = [
     gioiTinh: "Nữ",
     ngaySinh: "2000-10-10",
     diaChi: "56 Trần Hưng Đạo, Quận 1, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr016", name: "Nhà riêng", phone: "0913444555", address: "56 Trần Hưng Đạo, Quận 1, TP. Hồ Chí Minh", isDefault: true, latitude: 10.777, longitude: 106.695 }
@@ -2066,7 +2051,7 @@ export const users = [
     gioiTinh: "Nam",
     ngaySinh: "1999-09-30",
     diaChi: "77 Nguyễn Kiệm, Phú Nhuận, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr017", name: "Nhà riêng", phone: "0914555666", address: "77 Nguyễn Kiệm, Phú Nhuận, TP. Hồ Chí Minh", isDefault: true, latitude: 10.789, longitude: 106.680 }
@@ -2086,7 +2071,7 @@ export const users = [
     gioiTinh: "Nữ",
     ngaySinh: "2001-11-11",
     diaChi: "88 Lê Quang Định, Bình Thạnh, TP. Hồ Chí Minh",
-    hinhAnh: require("../assets/images/avatar.png"),
+    hinhAnh: "../assets/images/avatar.png",
      role: "customer",
     addrs: [
       { id: "addr018", name: "Nhà riêng", phone: "0915666777", address: "88 Lê Quang Định, Bình Thạnh, TP. Hồ Chí Minh", isDefault: true, latitude: 10.800, longitude: 106.700 }
@@ -2536,8 +2521,7 @@ export const ordersMock = [
   },
   {
     id: "4",
-      idCustomer: "u001", // ✅ thêm dòng này
-
+    idCustomer: "u001", 
     customer: "Phạm Thu Trang",
     phone: "0912345678",
     address: "67 Nguyễn Trãi, Q1",
@@ -2553,5 +2537,46 @@ export const ordersMock = [
     customerLocation: { latitude: 10.7729, longitude: 106.6983 },
   },
 ];
-
-
+// mockData/messages.js
+export const messages = [
+  {
+    customerId: "u001",
+    userId: "u002",
+    messages: [
+      { sender: "u001", text: "Shop ơi, còn hàng không?" },
+      { sender: "admin001", text: "Dạ còn nhé, bạn muốn size nào ạ?" },
+    ],
+  },
+  {
+    customerId: "u002",
+    userId: "u007",
+    messages: [
+      { sender: "u002", text: "Tôi có thể đổi sản phẩm không?" },
+      { sender: "admin001", text: "Được ạ, bạn gửi mã đơn giúp mình nhé." },
+    ],
+  },
+  {
+    customerId: "u003",
+    userId: "u002",
+    messages: [
+      { sender: "u003", text: "Giao hàng bao lâu vậy?" },
+      { sender: "admin002", text: "Khoảng 2-3 ngày bạn nhé." },
+    ],
+  },
+  {
+    customerId: "u004",
+    userId: "u002",
+    messages: [
+      { sender: "u004", text: "Shop có ưu đãi nào không?" },
+      { sender: "admin002", text: "Tuần này giảm 20% đó bạn!" },
+    ],
+  },
+  {
+    customerId: "u005",
+    userId: "u003",
+    messages: [
+      { sender: "u005", text: "Sản phẩm này là hàng chính hãng chứ?" },
+      { sender: "admin003", text: "Dạ đúng ạ, cam kết chính hãng 100%!" },
+    ],
+  },
+];
